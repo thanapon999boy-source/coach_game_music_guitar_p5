@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>เกมเปิดไพ่ ทายวิชาดนตรี ม.2 - การปฏิบัติกีตาร์</title>
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;font-family:"Noto Sans Thai","Tahoma",sans-serif;
+  background:linear-gradient(135deg,#151b4b,#3b1977 55%,#102d55);
+  color:#fff;min-height:100vh;
+}
+.container{max-width:1100px;margin:auto;padding:24px}
+h1{text-align:center;margin:5px 0 4px;font-size:clamp(28px,5vw,46px)}
+.subtitle{text-align:center;opacity:.9;margin-bottom:18px}
+.topbar{
+ display:flex;gap:12px;justify-content:center;align-items:center;flex-wrap:wrap;
+ background:rgba(255,255,255,.10);padding:14px;border-radius:18px;
+}
+.badge{padding:9px 15px;background:#fff;color:#25135e;border-radius:999px;font-weight:700}
+button{
+ border:0;border-radius:12px;padding:11px 18px;font-size:16px;font-weight:700;
+ cursor:pointer;background:#ffd54a;color:#231650;
+}
+button:hover{transform:translateY(-1px)}
+#board{
+ display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-top:22px;
+}
+.card{height:145px;perspective:1000px;cursor:pointer}
+.inner{position:relative;width:100%;height:100%;transition:.55s;transform-style:preserve-3d}
+.card.open .inner{transform:rotateY(180deg)}
+.face{
+ position:absolute;inset:0;backface-visibility:hidden;border-radius:18px;
+ display:flex;align-items:center;justify-content:center;text-align:center;
+ padding:12px;box-shadow:0 8px 20px rgba(0,0,0,.25);
+}
+.back{
+ background:linear-gradient(145deg,#e33d72,#6d3cc7);
+ font-size:40px;font-weight:900;
+ border:3px solid rgba(255,255,255,.3)
+}
+.back span{font-size:16px;display:block;margin-top:5px}
+.front{
+ background:#fff;color:#21184d;transform:rotateY(180deg);
+ font-size:18px;font-weight:800;
+ border:4px solid #ffd54a;
+}
+.front small{display:block;margin-top:8px;font-weight:500}
+#questionBox{
+ display:none;background:#fff;color:#1e1745;border-radius:20px;padding:22px;
+ margin-top:20px;box-shadow:0 12px 35px rgba(0,0,0,.3)
+}
+#question{font-size:24px;font-weight:900;margin-bottom:15px}
+.answers{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.answer{
+ background:#f0eef8;color:#241b51;text-align:left;border:2px solid #ddd;
+}
+.answer:hover{background:#e5ddff}
+#feedback{font-size:18px;font-weight:800;margin-top:15px;min-height:28px}
+.correct{color:#118844}.wrong{color:#d02b45}
+#next{display:none;margin-top:12px}
+.rules{
+ margin-top:22px;background:rgba(255,255,255,.08);padding:15px 20px;border-radius:16px;
+ line-height:1.7
+}
+@media(max-width:700px){
+ #board{grid-template-columns:repeat(3,1fr)}
+ .card{height:120px}.answers{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>🎸 เกมเปิดไพ่ ทายดนตรี</h1>
+<div class="subtitle">ระดับชั้นมัธยมศึกษาปีที่ 2 | เรื่อง การปฏิบัติกีตาร์</div>
+
+<div class="topbar">
+ <div class="badge">คะแนน: <span id="score">0</span></div>
+ <div class="badge">ข้อที่: <span id="count">0</span>/10</div>
+ <button onclick="restart()">🔄 เริ่มเกมใหม่</button>
+</div>
+
+<div id="board"></div>
+
+<div id="questionBox">
+ <div id="question"></div>
+ <div class="answers" id="answers"></div>
+ <div id="feedback"></div>
+ <button id="next" onclick="nextQuestion()">➡️ ข้อต่อไป</button>
+</div>
+
+<div class="rules">
+<b>🎮 วิธีเล่น</b><br>
+1. เลือกไพ่ 1 ใบเพื่อเปิดคำถาม<br>
+2. อ่านคำถามแล้วเลือกคำตอบที่ถูกต้อง<br>
+3. ตอบถูกได้ <b>10 คะแนน</b> ตอบผิดไม่ได้คะแนน<br>
+4. เล่นครบ 10 ข้อ ระบบจะแสดงคะแนนและระดับผลการเล่น
+</div>
+</div>
+
+<script>
+const questions=[
+ {q:"ท่าทางใดเหมาะสมที่สุดในการนั่งปฏิบัติกีตาร์",a:["นั่งหลังค่อมเพื่อให้มองสายชัด","นั่งหลังตรง ผ่อนคลาย และวางกีตาร์มั่นคง","นอนเล่นกีตาร์","ยืนบนเก้าอี้เล่นกีตาร์"],c:1},
+ {q:"กีตาร์มาตรฐานทั่วไปมีสายกี่สาย",a:["4 สาย","5 สาย","6 สาย","8 สาย"],c:2},
+ {q:"สายกีตาร์สายที่ 1 เมื่อปรับมาตรฐาน มีเสียงใด",a:["E","A","D","G"],c:0},
+ {q:"หน้าที่สำคัญของมือซ้ายในการเล่นกีตาร์คืออะไร",a:["ดีดสายเท่านั้น","กดสายเพื่อสร้างระดับเสียงและคอร์ด","ถือปิ๊กอย่างเดียว","หมุนลูกบิดทุกครั้ง"],c:1},
+ {q:"หน้าที่หลักของมือขวาในการเล่นกีตาร์คืออะไร",a:["กดเฟรต","ดีดหรือเกาสายให้เกิดเสียง","ตั้งสาย","จับคอกีตาร์แน่น ๆ"],c:1},
+ {q:"คอร์ด C Major ประกอบด้วยเสียงหลักใด",a:["C-E-G","D-F-A","G-B-D","A-C-E"],c:0},
+ {q:"เมื่อเปลี่ยนจากคอร์ด G ไป C แล้วจังหวะสะดุด ควรฝึกอย่างไร",a:["เร่งความเร็วทันที","ฝึกเปลี่ยนคอร์ดช้า ๆ ด้วยจังหวะสม่ำเสมอ","หยุดฝึก","กดสายให้แรงที่สุด"],c:1},
+ {q:"ข้อใดช่วยให้การดีดกีตาร์มีจังหวะสม่ำเสมอ",a:["ใช้เมโทรนอม","เปลี่ยนจังหวะตลอดเวลา","เล่นให้เร็วที่สุด","ไม่ต้องนับจังหวะ"],c:0},
+ {q:"การตั้งสายกีตาร์ก่อนเล่นมีประโยชน์อย่างไร",a:["ทำให้กีตาร์มีน้ำหนักเบา","ทำให้เสียงของแต่ละสายตรงตามระดับเสียงที่กำหนด","ทำให้คอกีตาร์สั้นลง","ทำให้เล่นโดยไม่ต้องกดสาย"],c:1},
+ {q:"หากต้องการพัฒนาทักษะกีตาร์ ควรปฏิบัติอย่างไร",a:["ฝึกเฉพาะวันที่สอบ","ฝึกอย่างสม่ำเสมอและทบทวนจุดที่ผิด","เล่นเร็วโดยไม่ฟังเสียง","หลีกเลี่ยงการเปลี่ยนคอร์ด"],c:1}
+];
+
+let score=0, current=0, used=new Set(), locked=false;
+const board=document.getElementById("board");
+
+function buildBoard(){
+ board.innerHTML="";
+ for(let i=0;i<10;i++){
+   const card=document.createElement("div");
+   card.className="card";
+   card.dataset.i=i;
+   card.innerHTML=`<div class="inner">
+     <div class="face back">🎴<span>เปิดไพ่ ${i+1}</span></div>
+     <div class="face front">คำถามที่ ${i+1}<small>แตะเพื่อเลือก</small></div>
+   </div>`;
+   card.onclick=()=>pick(i,card);
+   board.appendChild(card);
+ }
+}
+function pick(i,card){
+ if(locked || used.has(i) || current>=10)return;
+ used.add(i); locked=true; card.classList.add("open");
+ setTimeout(()=>showQuestion(i),500);
+}
+function showQuestion(i){
+ const item=questions[i];
+ document.getElementById("count").textContent=current+1;
+ document.getElementById("question").textContent=(current+1)+". "+item.q;
+ const answers=document.getElementById("answers");
+ answers.innerHTML="";
+ item.a.forEach((text,idx)=>{
+   const b=document.createElement("button");
+   b.className="answer";
+   b.textContent=String.fromCharCode(65+idx)+". "+text;
+   b.onclick=()=>answer(idx,item.c);
+   answers.appendChild(b);
+ });
+ document.getElementById("feedback").textContent="";
+ document.getElementById("next").style.display="none";
+ document.getElementById("questionBox").style.display="block";
+ document.getElementById("questionBox").scrollIntoView({behavior:"smooth",block:"center"});
+}
+function answer(choice,correct){
+ if(!locked)return;
+ locked=false;
+ document.querySelectorAll(".answer").forEach(b=>b.disabled=true);
+ const f=document.getElementById("feedback");
+ if(choice===correct){
+   score+=10;
+   document.getElementById("score").textContent=score;
+   f.textContent="✅ ถูกต้อง! +10 คะแนน";
+   f.className="correct";
+ }else{
+   f.textContent="❌ ยังไม่ถูก ลองทบทวนแล้วไปข้อต่อไป";
+   f.className="wrong";
+ }
+ document.getElementById("next").style.display="inline-block";
+}
+function nextQuestion(){
+ current++;
+ document.getElementById("questionBox").style.display="none";
+ if(current>=10){
+   setTimeout(finish,200);
+ }else{
+   locked=false;
+ }
+}
+function finish(){
+ let level=score>=90?"🏆 ยอดเยี่ยมมาก! นักกีตาร์มือทอง"
+   :score>=70?"🌟 ดีมาก! ทักษะกีตาร์กำลังพัฒนา"
+   :score>=50?"👍 ผ่านเกณฑ์ ลองฝึกเพิ่มเติม"
+   :"🎸 ฝึกอีกนิด แล้วกลับมาเล่นใหม่";
+ board.innerHTML=`<div style="grid-column:1/-1;text-align:center;background:#fff;color:#21184d;border-radius:22px;padding:35px">
+   <div style="font-size:42px">🎉</div>
+   <h2>จบเกม!</h2>
+   <p style="font-size:28px;font-weight:900">คะแนน ${score}/100</p>
+   <p style="font-size:20px">${level}</p>
+   <button onclick="restart()">🔄 เล่นอีกครั้ง</button>
+ </div>`;
+}
+function restart(){
+ score=0;current=0;used=new Set();locked=false;
+ document.getElementById("score").textContent=0;
+ document.getElementById("count").textContent=0;
+ document.getElementById("questionBox").style.display="none";
+ buildBoard();
+ window.scrollTo({top:0,behavior:"smooth"});
+}
+buildBoard();
+</script>
+</body>
+</html>
